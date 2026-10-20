@@ -204,6 +204,44 @@ def test_collisions_fail_closed_and_removal_restores_unique_match(monkeypatch):
     assert resolver.resolve(payload) is None
 
 
+@pytest.mark.parametrize("survivor", [0, 1, 2])
+def test_three_way_collision_removal_and_reregistration(
+    monkeypatch, survivor
+):
+    registered = (
+        Tile(TILE_ID, KEY),
+        Tile(OTHER_ID, OTHER_KEY),
+        Tile("1122334455667788", KEY),
+    )
+
+    def candidates(tile):
+        return {
+            b"sharedid": registered.index(tile),
+            bytes.fromhex(tile.tile_id): 10,
+        }
+
+    monkeypatch.setattr(implementation, "_generate_private_ids", candidates)
+    resolver = TileResolver(registered)
+    shared_payload = b"\x02\x00sharedid"
+    assert resolver.resolve(shared_payload) is None
+    removed = [tile for i, tile in enumerate(registered) if i != survivor]
+    resolver.remove(removed[0].tile_id)
+    assert resolver.resolve(shared_payload) is None
+    resolver.remove(removed[1].tile_id)
+    expected = TileInfo(registered[survivor], survivor, 2, 0)
+    assert resolver.resolve(shared_payload) == expected
+    for tile in removed:
+        unique_payload = b"\x02\x00" + bytes.fromhex(tile.tile_id)
+        assert resolver.resolve(unique_payload) is None
+    resolver.add(removed[0])
+    assert resolver.resolve(shared_payload) is None
+    resolver.remove(removed[0].tile_id)
+    assert resolver.resolve(shared_payload) == expected
+    resolver.remove(registered[survivor].tile_id)
+    assert resolver.resolve(shared_payload) is None
+    assert resolver.tiles == ()
+
+
 def test_tile_construction_does_not_prepare_candidates(monkeypatch):
     def fail(tile):
         pytest.fail("Tile construction must not generate private IDs")

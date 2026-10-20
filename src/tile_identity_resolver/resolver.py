@@ -32,8 +32,10 @@ class TileResolver:
 
     def __init__(self, tiles: Iterable[Tile] = ()) -> None:
         self._tiles: dict[str, Tile] = {}
-        self._private_ids: dict[str, dict[bytes, int]] = {}
-        self._index: dict[bytes, dict[str, int]] = {}
+        self._private_ids: dict[str, list[bytes]] = {}
+        self._index: dict[
+            bytes, tuple[Tile, int] | dict[str, tuple[Tile, int]]
+        ] = {}
         for tile in tiles:
             self.add(tile)
 
@@ -54,10 +56,20 @@ class TileResolver:
             raise ValueError("Tile ID is already registered")
         private_ids = _generate_private_ids(tile)
         self._tiles[tile.tile_id] = tile
-        self._private_ids[tile.tile_id] = private_ids
+        self._private_ids[tile.tile_id] = list(private_ids)
         for private_id, counter in private_ids.items():
-            owners = self._index.setdefault(private_id, {})
-            owners[tile.tile_id] = counter
+            match = (tile, counter)
+            owners = self._index.get(private_id)
+            if owners is None:
+                self._index[private_id] = match
+            elif isinstance(owners, tuple):
+                # Allocate an owners dictionary only for collisions.
+                self._index[private_id] = {
+                    owners[0].tile_id: owners,
+                    tile.tile_id: match,
+                }
+            else:
+                owners[tile.tile_id] = match
 
     def remove(self, tile_id: str) -> None:
         """Remove a Tile by hex ID; raise KeyError if it is unknown."""
@@ -65,9 +77,12 @@ class TileResolver:
         private_ids = self._private_ids.pop(tile_id)
         for private_id in private_ids:
             owners = self._index[private_id]
-            del owners[tile_id]
-            if not owners:
+            if isinstance(owners, tuple):
                 del self._index[private_id]
+            else:
+                del owners[tile_id]
+                if len(owners) == 1:
+                    self._index[private_id] = next(iter(owners.values()))
 
     def resolve(
         self, payload: bytes | bytearray | memoryview
@@ -83,12 +98,12 @@ class TileResolver:
         payload = bytes(payload)
         if len(payload) < 10 or payload[0] != 2:
             return None
-        owners = self._index.get(payload[2:10])
-        if not owners or len(owners) != 1:
+        match = self._index.get(payload[2:10])
+        if not isinstance(match, tuple):
             return None
-        tile_id, counter = next(iter(owners.items()))
+        tile, counter = match
         return TileInfo(
-            tile=self._tiles[tile_id],
+            tile=tile,
             counter=counter,
             version=payload[0],
             flags=payload[1],
