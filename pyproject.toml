@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=65", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,11 +7,11 @@ name = "tile-identity-resolver"
 version = "0.1.0"
 description = "Resolve Tile identities from FEED service data without Bluetooth dependencies"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = []
 classifiers = [
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Operating System :: OS Independent",
@@ -25,7 +25,14 @@ Issues = "https://github.com/kbck/tile-identity-resolver/issues"
 
 [project.optional-dependencies]
 test = ["pytest>=8,<9"]
-dev = ["pytest>=8,<9", "ruff>=0.11,<1", "build>=1,<2"]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.11,<1",
+    "build>=1,<2",
+    "mypy>=1.15,<3",
+    "twine>=6,<7",
+    "check-wheel-contents>=0.6,<1",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

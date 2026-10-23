@@ -55,12 +55,10 @@ presence, and a match does not prove freshness or proximity.
 
 ```sh
 python -m pip install -e '.[dev]'
-python -m pytest -q
-python -m ruff check src tests
-python -m build
+python tools/check_package.py
 ```
 
-See [RELEASING.md](RELEASING.md) for release instructions.
+Runs tests, code checks, and package validation.
 
 ## Acknowledgements
 
