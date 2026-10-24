@@ -5,10 +5,8 @@ version-2 FEED service data. Requires Python 3.10 or newer.
 
 ## Install
 
-From the repository root (not yet published on PyPI):
-
 ```sh
-python -m pip install .
+python -m pip install tile-identity-resolver
 ```
 
 ## Usage
